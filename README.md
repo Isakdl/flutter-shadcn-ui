@@ -57,6 +57,7 @@ See the [documentation](https://flutter-shadcn-ui.mariuti.com/) to interact with
 - [x] [Select](https://flutter-shadcn-ui.mariuti.com/components/select/)
 - [x] [Separator](https://flutter-shadcn-ui.mariuti.com/components/separator/)
 - [x] [Sheet](https://flutter-shadcn-ui.mariuti.com/components/sheet/)
+- [x] [Sidebar](https://flutter-shadcn-ui.mariuti.com/components/sidebar/)
 - [ ] Skeleton
 - [x] [Slider](https://flutter-shadcn-ui.mariuti.com/components/slider/)
 - [x] [Sonner](https://flutter-shadcn-ui.mariuti.com/components/sonner/)
@@ -81,6 +82,7 @@ Each widget I make takes some time because I try to solve problems in a simple w
 
 Another library could probably come first with more widgets, but in the long run it's the quality the most important thing.
 </details>
+
 
 ## Star History
 
