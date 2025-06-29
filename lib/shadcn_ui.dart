@@ -13,11 +13,16 @@ export 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 export 'package:universal_image/universal_image.dart';
 
 export 'src/app.dart';
+
+// Blocks
+export 'blocks/sidebar.dart';
+
 // Components
 export 'src/components/accordion.dart';
 export 'src/components/alert.dart';
 export 'src/components/avatar.dart';
 export 'src/components/badge.dart';
+export 'src/components/breadcrumb.dart';
 export 'src/components/button.dart';
 export 'src/components/calendar.dart';
 export 'src/components/card.dart';
@@ -81,6 +86,7 @@ export 'src/theme/components/accordion.dart';
 export 'src/theme/components/alert.dart';
 export 'src/theme/components/avatar.dart';
 export 'src/theme/components/badge.dart';
+export 'src/theme/components/breadcrumb.dart';
 export 'src/theme/components/button.dart';
 export 'src/theme/components/button_sizes.dart';
 export 'src/theme/components/calendar.dart';
