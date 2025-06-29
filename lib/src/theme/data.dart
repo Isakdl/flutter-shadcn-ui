@@ -26,6 +26,7 @@ import 'package:shadcn_ui/src/theme/components/resizable.dart';
 import 'package:shadcn_ui/src/theme/components/select.dart';
 import 'package:shadcn_ui/src/theme/components/separator.dart';
 import 'package:shadcn_ui/src/theme/components/sheet.dart';
+import 'package:shadcn_ui/src/theme/components/sidebar.dart';
 import 'package:shadcn_ui/src/theme/components/slider.dart';
 import 'package:shadcn_ui/src/theme/components/sonner.dart';
 import 'package:shadcn_ui/src/theme/components/switch.dart';
@@ -100,6 +101,7 @@ class ShadThemeData extends ShadBaseTheme {
     ShadSonnerTheme? sonnerTheme,
     ShadTextareaTheme? textareaTheme,
     ShadDefaultKeyboardToolbarTheme? defaultKeyboardToolbarTheme,
+    ShadSidebarTheme? sidebarTheme,
   }) {
     final effectiveRadius =
         radius ?? const BorderRadius.all(Radius.circular(6));
@@ -250,6 +252,7 @@ class ShadThemeData extends ShadBaseTheme {
       defaultKeyboardToolbarTheme: effectiveVariant
           .defaultKeyboardToolbarTheme()
           .mergeWith(defaultKeyboardToolbarTheme),
+      sidebarTheme: effectiveVariant.sidebarTheme().mergeWith(sidebarTheme),
     );
   }
 
@@ -308,6 +311,7 @@ class ShadThemeData extends ShadBaseTheme {
     required super.sonnerTheme,
     required super.textareaTheme,
     required super.defaultKeyboardToolbarTheme,
+    required super.sidebarTheme,
   });
 
   static ShadThemeData lerp(ShadThemeData a, ShadThemeData b, double t) {
@@ -419,6 +423,9 @@ class ShadThemeData extends ShadBaseTheme {
         b.defaultKeyboardToolbarTheme,
         t,
       ),
+      textareaTheme:
+          ShadTextareaTheme.lerp(a.textareaTheme, b.textareaTheme, t),
+      sidebarTheme: ShadSidebarTheme.lerp(a.sidebarTheme, b.sidebarTheme, t),
     );
   }
 
@@ -479,7 +486,9 @@ class ShadThemeData extends ShadBaseTheme {
         other.menubarTheme == menubarTheme &&
         other.separatorTheme == separatorTheme &&
         other.sonnerTheme == sonnerTheme &&
-        other.defaultKeyboardToolbarTheme == defaultKeyboardToolbarTheme;
+        other.defaultKeyboardToolbarTheme == defaultKeyboardToolbarTheme &&
+        other.textareaTheme == textareaTheme &&
+        other.sidebarTheme == sidebarTheme;
   }
 
   @override
@@ -536,7 +545,9 @@ class ShadThemeData extends ShadBaseTheme {
         menubarTheme.hashCode ^
         separatorTheme.hashCode ^
         sonnerTheme.hashCode ^
-        defaultKeyboardToolbarTheme.hashCode;
+        defaultKeyboardToolbarTheme.hashCode ^
+        textareaTheme.hashCode ^
+        sidebarTheme.hashCode;
   }
 
   ShadThemeData copyWith({
@@ -594,6 +605,7 @@ class ShadThemeData extends ShadBaseTheme {
     ShadSonnerTheme? sonnerTheme,
     ShadTextareaTheme? textareaTheme,
     ShadDefaultKeyboardToolbarTheme? defaultKeyboardToolbarTheme,
+    ShadSidebarTheme? sidebarTheme,
   }) {
     return ShadThemeData(
       colorScheme: colorScheme ?? this.colorScheme,
@@ -656,6 +668,7 @@ class ShadThemeData extends ShadBaseTheme {
       textareaTheme: textareaTheme ?? this.textareaTheme,
       defaultKeyboardToolbarTheme:
           defaultKeyboardToolbarTheme ?? this.defaultKeyboardToolbarTheme,
+      sidebarTheme: sidebarTheme ?? this.sidebarTheme,
     );
   }
 }
