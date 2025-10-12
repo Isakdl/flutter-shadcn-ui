@@ -1140,7 +1140,7 @@ class ShadDefaultThemeNoSecondaryBorderVariant extends ShadThemeVariant {
   @override
   ShadSidebarTheme sidebarTheme() {
     return const ShadSidebarTheme(
-      side: ShadSidebarSide.left,
+      initiallyExtended: true,
       animationDuration: Duration(milliseconds: 200),
       animationCurve: Curves.linear,
       collapseMode: ShadSidebarCollapseMode.offScreen,
