@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-import '../../extra/pump_async_widget.dart';
-
 void main() {
   // Helper method to create a test widget wrapped in ShadApp and Scaffold
   Widget createTestWidget(Widget child) {
@@ -16,7 +14,7 @@ void main() {
 
   group('ShadSidebar', () {
     testWidgets('renders basic sidebar correctly', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+      await tester.pumpWidget(
         createTestWidget(
           ShadSidebar(
             navGroups: [
@@ -36,7 +34,7 @@ void main() {
     });
 
     testWidgets('renders with header and footer', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+      await tester.pumpWidget(
         createTestWidget(
           ShadSidebar(
             header: const ShadSidebarHeader(title: 'My App'),
@@ -66,8 +64,8 @@ void main() {
 
     testWidgets('respects width property', (WidgetTester tester) async {
       const testWidth = 350.0;
-      
-      await tester.pumpAsyncWidget(
+
+      await tester.pumpWidget(
         createTestWidget(
           const ShadSidebar(
             width: testWidth,
@@ -76,12 +74,16 @@ void main() {
         ),
       );
 
-      final sidebarWidget = tester.widget<ShadSidebar>(find.byType(ShadSidebar));
+      final sidebarWidget = tester.widget<ShadSidebar>(
+        find.byType(ShadSidebar),
+      );
       expect(sidebarWidget.width, testWidth);
     });
 
-    testWidgets('collapses when isCollapsed is true', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+    testWidgets('collapses when isCollapsed is true', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
         createTestWidget(
           ShadSidebar(
             isCollapsed: true,
@@ -98,15 +100,17 @@ void main() {
 
       // When collapsed, the sidebar should show as SizedBox.shrink
       expect(find.byType(SizedBox), findsOneWidget);
-      
+
       // Content should not be visible when collapsed
       expect(find.text('Dashboard'), findsNothing);
     });
 
-    testWidgets('calls onCollapsedChanged when state changes', (WidgetTester tester) async {
+    testWidgets('calls onCollapsedChanged when state changes', (
+      WidgetTester tester,
+    ) async {
       bool? collapsedState;
-      
-      await tester.pumpAsyncWidget(
+
+      await tester.pumpWidget(
         createTestWidget(
           ShadSidebar(
             onCollapsedChanged: (bool value) => collapsedState = value,
@@ -115,14 +119,21 @@ void main() {
         ),
       );
 
-      final sidebarWidget = tester.widget<ShadSidebar>(find.byType(ShadSidebar));
+      final sidebarWidget = tester.widget<ShadSidebar>(
+        find.byType(ShadSidebar),
+      );
       expect(sidebarWidget.onCollapsedChanged, isNotNull);
       // Note: collapsedState would be updated by the callback when triggered
-      expect(collapsedState, isNull); // Initially null since callback hasn't been called
+      expect(
+        collapsedState,
+        isNull,
+      ); // Initially null since callback hasn't been called
     });
 
-    testWidgets('renders multiple navigation groups', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+    testWidgets('renders multiple navigation groups', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
         createTestWidget(
           ShadSidebar(
             navGroups: [
@@ -152,7 +163,7 @@ void main() {
 
   group('ShadSidebarGroup', () {
     testWidgets('renders group with label', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+      await tester.pumpWidget(
         createTestWidget(
           ShadSidebarGroup(
             label: 'Navigation',
@@ -170,7 +181,7 @@ void main() {
     });
 
     testWidgets('renders group without label', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+      await tester.pumpWidget(
         createTestWidget(
           ShadSidebarGroup(
             items: [
@@ -184,7 +195,7 @@ void main() {
     });
 
     testWidgets('renders collapsible group', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+      await tester.pumpWidget(
         createTestWidget(
           ShadSidebarGroup(
             label: 'Collapsible',
@@ -199,13 +210,15 @@ void main() {
 
       expect(find.text('Collapsible'), findsOneWidget);
       expect(find.text('Item 1'), findsOneWidget);
-      
+
       // Should find chevron icon for collapsible groups
       expect(find.byType(Icon), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('toggles collapsible group on tap', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+    testWidgets('toggles collapsible group on tap', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
         createTestWidget(
           ShadSidebarGroup(
             label: 'Collapsible',
@@ -232,7 +245,7 @@ void main() {
 
   group('ShadSidebarMenuItem', () {
     testWidgets('renders menu item with title', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+      await tester.pumpWidget(
         createTestWidget(
           const ShadSidebarMenuItem(
             item: ShadSidebarNavItem(title: 'Dashboard'),
@@ -244,7 +257,7 @@ void main() {
     });
 
     testWidgets('renders menu item with icon', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+      await tester.pumpWidget(
         createTestWidget(
           const ShadSidebarMenuItem(
             item: ShadSidebarNavItem(
@@ -261,8 +274,8 @@ void main() {
 
     testWidgets('executes onTap callback', (WidgetTester tester) async {
       bool tapped = false;
-      
-      await tester.pumpAsyncWidget(
+
+      await tester.pumpWidget(
         createTestWidget(
           ShadSidebarMenuItem(
             item: ShadSidebarNavItem(
@@ -279,8 +292,10 @@ void main() {
       expect(tapped, true);
     });
 
-    testWidgets('renders nested items with chevron', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+    testWidgets('renders nested items with chevron', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
         createTestWidget(
           const ShadSidebarMenuItem(
             item: ShadSidebarNavItem(
@@ -300,7 +315,7 @@ void main() {
     });
 
     testWidgets('shows active state styling', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+      await tester.pumpWidget(
         createTestWidget(
           const ShadSidebarMenuItem(
             item: ShadSidebarNavItem(
@@ -312,15 +327,17 @@ void main() {
       );
 
       expect(find.text('Dashboard'), findsOneWidget);
-      
-      final menuItem = tester.widget<ShadSidebarMenuItem>(find.byType(ShadSidebarMenuItem));
+
+      final menuItem = tester.widget<ShadSidebarMenuItem>(
+        find.byType(ShadSidebarMenuItem),
+      );
       expect(menuItem.item.isActive, true);
     });
   });
 
   group('ShadSidebarHeader', () {
     testWidgets('renders header with title', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+      await tester.pumpWidget(
         createTestWidget(
           const ShadSidebarHeader(title: 'My Application'),
         ),
@@ -329,8 +346,10 @@ void main() {
       expect(find.text('My Application'), findsOneWidget);
     });
 
-    testWidgets('renders header with logo and subtitle', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+    testWidgets('renders header with logo and subtitle', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
         createTestWidget(
           const ShadSidebarHeader(
             title: 'My App',
@@ -347,8 +366,8 @@ void main() {
 
     testWidgets('executes onTap callback', (WidgetTester tester) async {
       bool tapped = false;
-      
-      await tester.pumpAsyncWidget(
+
+      await tester.pumpWidget(
         createTestWidget(
           ShadSidebarHeader(
             title: 'My App',
@@ -366,7 +385,7 @@ void main() {
 
   group('ShadSidebarFooter', () {
     testWidgets('renders footer with user info', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+      await tester.pumpWidget(
         createTestWidget(
           const ShadSidebarFooter(
             user: ShadSidebarUser(
@@ -382,7 +401,7 @@ void main() {
     });
 
     testWidgets('renders user avatar fallback', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+      await tester.pumpWidget(
         createTestWidget(
           const ShadSidebarFooter(
             user: ShadSidebarUser(
@@ -398,7 +417,7 @@ void main() {
     });
 
     testWidgets('renders with action widgets', (WidgetTester tester) async {
-      await tester.pumpAsyncWidget(
+      await tester.pumpWidget(
         createTestWidget(
           const ShadSidebarFooter(
             user: ShadSidebarUser(
@@ -419,8 +438,8 @@ void main() {
 
     testWidgets('executes onUserTap callback', (WidgetTester tester) async {
       bool tapped = false;
-      
-      await tester.pumpAsyncWidget(
+
+      await tester.pumpWidget(
         createTestWidget(
           ShadSidebarFooter(
             user: const ShadSidebarUser(
@@ -442,7 +461,7 @@ void main() {
   group('ShadSidebarNavItem', () {
     test('creates nav item with required fields', () {
       const navItem = ShadSidebarNavItem(title: 'Dashboard');
-      
+
       expect(navItem.title, 'Dashboard');
       expect(navItem.url, null);
       expect(navItem.icon, null);
@@ -454,7 +473,7 @@ void main() {
     test('creates nav item with all fields', () {
       final icon = const Icon(Icons.dashboard);
       void onTap() {}
-      
+
       final navItem = ShadSidebarNavItem(
         title: 'Dashboard',
         url: '/dashboard',
@@ -465,7 +484,7 @@ void main() {
         ],
         onTap: onTap,
       );
-      
+
       expect(navItem.title, 'Dashboard');
       expect(navItem.url, '/dashboard');
       expect(navItem.icon, icon);
@@ -482,7 +501,7 @@ void main() {
         name: 'John Doe',
         email: 'john@example.com',
       );
-      
+
       expect(user.name, 'John Doe');
       expect(user.email, 'john@example.com');
       expect(user.avatar, null);
@@ -494,7 +513,7 @@ void main() {
         email: 'john@example.com',
         avatar: 'https://example.com/avatar.jpg',
       );
-      
+
       expect(user.name, 'John Doe');
       expect(user.email, 'john@example.com');
       expect(user.avatar, 'https://example.com/avatar.jpg');
