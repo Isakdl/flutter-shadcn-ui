@@ -53,7 +53,7 @@ class ShadSidebarScaffold extends StatefulWidget {
   final Widget body;
 
   /// The sidebar to display on the start side of the screen.
-  final ShadSidebar? sidebar;
+  final Widget? sidebar;
 
   /// A controller to control the sidebar.
   ///
@@ -62,7 +62,7 @@ class ShadSidebarScaffold extends StatefulWidget {
   final ShadSidebarController? sidebarController;
 
   /// The sidebar to display on the end side of the screen.
-  final ShadSidebar? endSidebar;
+  final Widget? endSidebar;
 
   /// A controller to control the sidebar.
   ///
