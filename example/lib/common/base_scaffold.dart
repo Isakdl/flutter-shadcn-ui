@@ -19,9 +19,9 @@ class BaseScaffold extends StatelessWidget {
     this.childrenPanelMinWidth = .5,
     this.childrenPanelInitialWidth = .7,
   }) : assert(
-          editablePanelInitialWidth >= editablePanelMinWidth,
-          "The editable panel's initial width must be greater than or equal to its minimum width.",
-        );
+         editablePanelInitialWidth >= editablePanelMinWidth,
+         "The editable panel's initial width must be greater than or equal to its minimum width.",
+       );
 
   final List<Widget> children;
   final String appBarTitle;
@@ -79,13 +79,8 @@ class BaseScaffold extends StatelessWidget {
                     children: [
                       ShadResizablePanel(
                         id: 0,
-<<<<<<< HEAD
-                        defaultSize: .7,
-                        minSize: .5,
-=======
                         defaultSize: childrenPanelInitialWidth,
                         minSize: childrenPanelMinWidth,
->>>>>>> 4cb6836 (feat: add Sidebar component (#239))
                         child: left,
                       ),
                       ShadResizablePanel(
