@@ -359,7 +359,9 @@ class ShadSidebarState extends State<ShadSidebar>
   void dispose() {
     _effectiveController?.removeListener(_handleControllerChanged);
     _effectiveController?.detach(this);
+    _effectiveController = null;
     _internalController?.dispose();
+    _internalController = null;
     _animationController.dispose();
     super.dispose();
   }
