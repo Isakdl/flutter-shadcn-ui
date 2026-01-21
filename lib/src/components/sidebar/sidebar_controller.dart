@@ -20,6 +20,7 @@ class ShadSidebarController extends ChangeNotifier {
       _extended = state.widget.initiallyExtended!;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!hasListeners || _state != state) return;
       notifyListeners();
     });
   }
@@ -30,6 +31,7 @@ class ShadSidebarController extends ChangeNotifier {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!hasListeners) return;
       notifyListeners();
     });
   }

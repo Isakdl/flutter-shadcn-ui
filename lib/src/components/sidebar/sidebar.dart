@@ -367,19 +367,24 @@ class ShadSidebarState extends State<ShadSidebar>
   }
 
   void _handleControllerChanged() {
-    if (_effectiveController?.extended ?? false) {
+    // Guard against accessing controller after disposal
+    if (!mounted || _effectiveController == null) return;
+
+    if (_effectiveController!.extended) {
       _animationController.forward();
     } else {
       _animationController.reverse();
     }
-    if (_effectiveController?.isMobile ?? false) {
-      if (_effectiveController?.extendedMobile ?? false) {
+    if (_effectiveController!.isMobile) {
+      if (_effectiveController!.extendedMobile) {
         _openMobile();
       } else {
         _closeMobile();
       }
     }
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _openMobile() {
@@ -437,15 +442,16 @@ class ShadSidebarState extends State<ShadSidebar>
         );
       },
     ).then((_) {
-      _effectiveController?.closeMobile();
+      if (mounted && _effectiveController != null) {
+        _effectiveController!.closeMobile();
+      }
     });
   }
 
   void _closeMobile() {
-    if (_effectiveController != null) {
-      if (!_effectiveController!.extendedMobile) return;
-      Navigator.maybePop(context);
-    }
+    if (!mounted || _effectiveController == null) return;
+    if (!_effectiveController!.extendedMobile) return;
+    Navigator.maybePop(context);
   }
 
   void toggle() => _effectiveController?.toggle();
