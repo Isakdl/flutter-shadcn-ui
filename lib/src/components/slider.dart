@@ -1,9 +1,7 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:shadcn_ui/src/raw_components/focusable.dart';
-
-import 'package:shadcn_ui/src/theme/theme.dart';
-import 'package:shadcn_ui/src/utils/gesture_detector.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 /// Possible ways for a user to interact with a [ShadSlider].
 enum ShadSliderInteraction {
@@ -36,30 +34,29 @@ enum ShadSliderInteraction {
 }
 
 /// {@template ShadSliderController}
-/// A controller for the [ShadSlider] widget, managing its value.
+/// A controller for the [ShadSlider] widget, managing its values.
 ///
-/// Extends [ValueNotifier] to provide reactive updates when the slider value
-/// changes.
+/// Extends [ValueNotifier] to provide reactive updates when the slider values
+/// change.
 /// {@endtemplate}
-class ShadSliderController extends ValueNotifier<double> {
-  /// Creates a [ShadSliderController] with an initial value.
-  ShadSliderController({
-    required double initialValue,
-  }) : super(initialValue);
+class ShadSliderController extends ValueNotifier<List<double>> {
+  /// Creates a [ShadSliderController] with initial values.
+  ShadSliderController({required List<double> initialValues})
+    : super(List<double>.from(initialValues));
 }
 
 /// A customizable slider widget styled to match the Shadcn UI design system.
 ///
-/// Allows users to select a value from a continuous range by dragging a thumb
-/// along a track.
+/// Allows users to select one or more values from a continuous range by
+/// dragging thumbs along a track.
 class ShadSlider extends StatefulWidget {
   /// Creates a [ShadSlider].
   ///
-  /// Either [initialValue] or [controller] must be provided to determine the
-  /// slider's starting value.
-  const ShadSlider({
+  /// Either [initialValues] or [controller] must be provided to determine the
+  /// slider's starting values.
+  ShadSlider({
     super.key,
-    this.initialValue,
+    this.initialValues,
     this.onChanged,
     this.enabled = true,
     this.min,
@@ -78,31 +75,37 @@ class ShadSlider extends StatefulWidget {
     this.disabledInactiveTrackColor,
     this.trackHeight,
     this.thumbRadius,
+    this.thumbDecoration,
     this.onChangeStart,
     this.onChangeEnd,
     this.divisions,
+    this.showDivisionMarks = true,
     this.label,
     this.semanticFormatterCallback,
     this.allowedInteraction,
     this.controller,
   }) : assert(
-         (initialValue != null) ^ (controller != null),
-         'Either initialValue or controller must be specified',
+         (initialValues != null) ^ (controller != null),
+         'Either initialValues or controller must be specified',
+       ),
+       assert(
+         initialValues == null || initialValues.isNotEmpty,
+         'initialValues must be non-empty',
        );
 
-  /// {@template ShadSlider.initialValue}
-  /// The initial value of the slider.
+  /// {@template ShadSlider.initialValues}
+  /// The initial values of the slider, one thumb per entry.
   ///
-  /// This value is used only when [controller] is null.
+  /// These values are used only when [controller] is null.
   /// {@endtemplate}
-  final double? initialValue;
+  final List<double>? initialValues;
 
   /// {@template ShadSlider.onChanged}
-  /// Callback that is called when the slider value changes.
+  /// Callback that is called when any slider value changes.
   ///
-  /// Provides the new value as an argument.
+  /// Provides the full list of values as an argument.
   /// {@endtemplate}
-  final ValueChanged<double>? onChanged;
+  final ValueChanged<List<double>>? onChanged;
 
   /// {@template ShadSlider.enabled}
   /// Whether the slider is enabled.
@@ -224,19 +227,27 @@ class ShadSlider extends StatefulWidget {
   /// {@endtemplate}
   final double? thumbRadius;
 
-  /// {@template ShadSlider.onChangeStart}
-  /// Callback that is called when the user starts to change the slider value.
-  ///
-  /// Provides the starting value as an argument.
+  /// {@template ShadSlider.thumbDecoration}
+  /// When set, replaces the default thumb [ShadDecoration] built from
+  /// [thumbColor], [thumbBorderColor], and [ShadSliderTheme]. Use
+  /// `canMerge: false` so [ShadDecorator] does not merge the global theme
+  /// decoration into the thumb.
   /// {@endtemplate}
-  final ValueChanged<double>? onChangeStart;
+  final ShadDecoration? thumbDecoration;
+
+  /// {@template ShadSlider.onChangeStart}
+  /// Callback that is called when the user starts to change a slider value.
+  ///
+  /// Provides the current values as an argument.
+  /// {@endtemplate}
+  final ValueChanged<List<double>>? onChangeStart;
 
   /// {@template ShadSlider.onChangeEnd}
-  /// Callback that is called when the user finishes changing the slider value.
+  /// Callback that is called when the user finishes changing a slider value.
   ///
-  /// Provides the ending value as an argument.
+  /// Provides the current values as an argument.
   /// {@endtemplate}
-  final ValueChanged<double>? onChangeEnd;
+  final ValueChanged<List<double>>? onChangeEnd;
 
   /// {@template ShadSlider.divisions}
   /// The number of discrete divisions the slider has.
@@ -244,6 +255,14 @@ class ShadSlider extends StatefulWidget {
   /// When provided, the slider will snap to these divisions.
   /// {@endtemplate}
   final int? divisions;
+
+  /// {@template ShadSlider.showDivisionMarks}
+  /// Whether to draw tick marks on the track when [divisions] is set.
+  ///
+  /// Snapping still applies when [divisions] is non-null; set this to false for
+  /// a cleaner track. Defaults to true.
+  /// {@endtemplate}
+  final bool showDivisionMarks;
 
   /// {@template ShadSlider.label}
   /// A label to display above the slider when the thumb is pressed.
@@ -253,7 +272,7 @@ class ShadSlider extends StatefulWidget {
   /// {@template ShadSlider.semanticFormatterCallback}
   /// A semantic formatter to be called by assistive technologies.
   /// {@endtemplate}
-  final String Function(double value)? semanticFormatterCallback;
+  final String Function(List<double> values)? semanticFormatterCallback;
 
   /// {@template ShadSlider.allowedInteraction}
   /// Configures how the user can interact with the slider.
@@ -269,37 +288,95 @@ class ShadSlider extends StatefulWidget {
   State<ShadSlider> createState() => _ShadSliderState();
 }
 
+/// Absorbs touch long-press before an ancestor [SelectableRegion] handles it,
+/// so the region does not take focus (see [SelectableRegion] long-press path).
+class _AbsorbSelectableRegionLongPress extends StatelessWidget {
+  const _AbsorbSelectableRegionLongPress({required this.child});
+
+  final Widget child;
+
+  static const Set<PointerDeviceKind> _devices = <PointerDeviceKind>{
+    PointerDeviceKind.touch,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.invertedStylus,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return RawGestureDetector(
+      behavior: HitTestBehavior.translucent,
+      gestures: <Type, GestureRecognizerFactory>{
+        LongPressGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+              () => LongPressGestureRecognizer(supportedDevices: _devices),
+              (LongPressGestureRecognizer instance) {
+                instance.onLongPressStart = (_) {};
+              },
+            ),
+      },
+      child: child,
+    );
+  }
+}
+
 class _ShadSliderState extends State<ShadSlider> {
-  late final controller =
-      widget.controller ??
-      ShadSliderController(
-        initialValue: widget.initialValue!,
-      );
+  late final ShadSliderController _ownedController = ShadSliderController(
+    initialValues: List<double>.from(widget.initialValues!),
+  );
+
+  ShadSliderController get controller => widget.controller ?? _ownedController;
 
   FocusNode? _focusNode;
   FocusNode get focusNode => widget.focusNode ?? (_focusNode ??= FocusNode());
+
+  final List<FocusNode> _thumbFocusNodes = [];
+  int? _trackDragThumbIndex;
+
+  void _syncThumbFocusNodesForCount(int valueCount) {
+    final needed = valueCount > 1 ? valueCount : 0;
+    while (_thumbFocusNodes.length < needed) {
+      _thumbFocusNodes.add(FocusNode());
+    }
+    while (_thumbFocusNodes.length > needed) {
+      _thumbFocusNodes.removeLast().dispose();
+    }
+  }
+
+  void _onControllerThumbCountChanged() {
+    final n = controller.value.length;
+    final needed = n > 1 ? n : 0;
+    if (_thumbFocusNodes.length != needed) {
+      _syncThumbFocusNodesForCount(n);
+      setState(() {});
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _syncThumbFocusNodesForCount(controller.value.length);
+    controller.addListener(_onControllerThumbCountChanged);
+  }
 
   @override
   void didUpdateWidget(covariant ShadSlider oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      // Dispose the old controller if it was internally created
-      if (oldWidget.controller == null) {
-        oldWidget.controller?.dispose();
-      }
-      // Initialize the new controller if it's null
+      final oldCtrl = oldWidget.controller ?? _ownedController;
+      final newCtrl = widget.controller ?? _ownedController;
+      oldCtrl.removeListener(_onControllerThumbCountChanged);
+      newCtrl.addListener(_onControllerThumbCountChanged);
       if (widget.controller == null) {
-        controller.value = widget.initialValue!;
+        controller.value = List<double>.from(widget.initialValues!);
       }
+      _syncThumbFocusNodesForCount(controller.value.length);
     }
 
     if (oldWidget.focusNode != widget.focusNode) {
-      // Dispose the old focus node if it was internally created
       if (oldWidget.focusNode == null) {
         _focusNode?.dispose();
         _focusNode = null;
       }
-      // Initialize the new focus node if it's null
       if (widget.focusNode == null && _focusNode == null) {
         _focusNode = FocusNode();
       }
@@ -308,18 +385,20 @@ class _ShadSliderState extends State<ShadSlider> {
 
   @override
   void dispose() {
+    controller.removeListener(_onControllerThumbCountChanged);
+    for (final n in _thumbFocusNodes) {
+      n.dispose();
+    }
+    _thumbFocusNodes.clear();
     _focusNode?.dispose();
-    // dispose the internal controller
     if (widget.controller == null) {
-      controller.dispose();
+      _ownedController.dispose();
     }
     super.dispose();
   }
 
-  void _updateSliderValue(double newValue) {
-    final effectiveMin = widget.min ?? 0;
-    final effectiveMax = widget.max ?? 1;
-    var clampedValue = newValue.clamp(effectiveMin, effectiveMax);
+  double _clampAndSnap(double raw, double effectiveMin, double effectiveMax) {
+    var clampedValue = raw.clamp(effectiveMin, effectiveMax);
 
     if (widget.divisions != null) {
       final step = (effectiveMax - effectiveMin) / widget.divisions!;
@@ -327,33 +406,118 @@ class _ShadSliderState extends State<ShadSlider> {
           ((clampedValue - effectiveMin) / step).round() * step + effectiveMin;
     }
 
-    if (clampedValue != controller.value) {
-      controller.value = clampedValue;
-      widget.onChanged?.call(clampedValue);
+    return clampedValue;
+  }
+
+  void _updateThumbAt(
+    int index,
+    double newValue,
+    double effectiveMin,
+    double effectiveMax,
+  ) {
+    final clampedValue = _clampAndSnap(newValue, effectiveMin, effectiveMax);
+    final current = controller.value;
+    if (index < 0 || index >= current.length) {
+      return;
+    }
+    if (current[index] == clampedValue) {
+      return;
+    }
+    final next = List<double>.from(current);
+    next[index] = clampedValue;
+    controller.value = next;
+    widget.onChanged?.call(next);
+  }
+
+  double _valueFromDx(
+    double dx,
+    BoxConstraints constraints,
+    double effectiveMin,
+    double effectiveMax,
+  ) {
+    return effectiveMin +
+        (dx / constraints.maxWidth) * (effectiveMax - effectiveMin);
+  }
+
+  int _nearestThumbIndex(double value, List<double> values) {
+    var bestIndex = 0;
+    var bestDistance = (values[0] - value).abs();
+    for (var i = 1; i < values.length; i++) {
+      final d = (values[i] - value).abs();
+      if (d < bestDistance) {
+        bestDistance = d;
+        bestIndex = i;
+      }
+    }
+    return bestIndex;
+  }
+
+  void _requestFocusForThumb(int thumbIndex) {
+    if (!widget.enabled) {
+      return;
+    }
+    final values = controller.value;
+    if (thumbIndex < 0 || thumbIndex >= values.length) {
+      return;
+    }
+    if (values.length == 1) {
+      focusNode.requestFocus();
+      return;
+    }
+    if (thumbIndex < _thumbFocusNodes.length) {
+      _thumbFocusNodes[thumbIndex].requestFocus();
     }
   }
 
-  void _handleTrackTap(Offset localPosition, BoxConstraints constraints) {
-    final effectiveMin = widget.min ?? 0;
-    final effectiveMax = widget.max ?? 1;
-    final newValue =
-        effectiveMin +
-        (localPosition.dx / constraints.maxWidth) *
-            (effectiveMax - effectiveMin);
-    _updateSliderValue(newValue);
+  String _semanticValueForThumb(
+    List<double> allValues,
+    int thumbIndex,
+    double thumbValue,
+  ) {
+    final formatter = widget.semanticFormatterCallback;
+    if (formatter != null) {
+      return formatter(allValues);
+    }
+    return thumbValue.toString();
   }
 
-  void _handleTrackPan(Offset localPosition, BoxConstraints constraints) {
-    final effectiveMin = widget.min ?? 0;
-    final effectiveMax = widget.max ?? 1;
-    final newValue =
-        effectiveMin +
-        (localPosition.dx / constraints.maxWidth) *
-            (effectiveMax - effectiveMin);
-    _updateSliderValue(newValue);
+  void _handleTrackTap(
+    Offset localPosition,
+    BoxConstraints constraints,
+    double effectiveMin,
+    double effectiveMax,
+  ) {
+    final newValue = _valueFromDx(
+      localPosition.dx,
+      constraints,
+      effectiveMin,
+      effectiveMax,
+    );
+    final index = _nearestThumbIndex(newValue, controller.value);
+    _requestFocusForThumb(index);
+    _updateThumbAt(index, newValue, effectiveMin, effectiveMax);
   }
 
-  bool _handleKeyEvent(KeyEvent event) {
+  void _handleTrackPan(
+    Offset localPosition,
+    BoxConstraints constraints,
+    double effectiveMin,
+    double effectiveMax,
+  ) {
+    final thumbIndex = _trackDragThumbIndex;
+    if (thumbIndex == null) {
+      return;
+    }
+    final newValue = _valueFromDx(
+      localPosition.dx,
+      constraints,
+      effectiveMin,
+      effectiveMax,
+    );
+    _updateThumbAt(thumbIndex, newValue, effectiveMin, effectiveMax);
+  }
+
+  bool _handleKeyEvent(int thumbIndex, KeyEvent event) {
     if (!widget.enabled ||
         (event is! KeyDownEvent && event is! KeyRepeatEvent)) {
       return false;
@@ -367,21 +531,42 @@ class _ShadSliderState extends State<ShadSlider> {
     if (widget.divisions != null && widget.divisions! > 0) {
       increment = range / widget.divisions!;
     } else {
-      increment = range * 0.01; // 1% of range for smooth movement
+      increment = range * 0.01;
+    }
+    if (HardwareKeyboard.instance.isShiftPressed) {
+      increment *= 10;
     }
 
-    var newValue = controller.value;
+    final values = controller.value;
+    if (values.isEmpty || thumbIndex < 0 || thumbIndex >= values.length) {
+      return false;
+    }
+    var newValue = values[thumbIndex];
 
-    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+        event.logicalKey == LogicalKeyboardKey.arrowDown) {
       newValue -= increment;
-    } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+    } else if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
+        event.logicalKey == LogicalKeyboardKey.arrowUp) {
       newValue += increment;
     } else {
       return false;
     }
 
-    _updateSliderValue(newValue);
+    _updateThumbAt(thumbIndex, newValue, effectiveMin, effectiveMax);
     return true;
+  }
+
+  List<int> _indicesSortedByValue(List<double> values) {
+    final indices = List<int>.generate(values.length, (i) => i);
+    indices.sort((a, b) {
+      final c = values[a].compareTo(values[b]);
+      if (c != 0) {
+        return c;
+      }
+      return a.compareTo(b);
+    });
+    return indices;
   }
 
   @override
@@ -449,198 +634,302 @@ class _ShadSliderState extends State<ShadSlider> {
     final effectiveAllowedInteraction =
         widget.allowedInteraction ?? ShadSliderInteraction.tapAndSlide;
 
-    // Focus ring configuration
     const focusRingBorderWidth = 2.0;
     const focusRingPadding = 2.0;
     const thumbBorderWidth = 2.0;
 
-    // Division marks configuration
+    final thumbFillColor = widget.enabled
+        ? effectiveThumbColor
+        : effectiveDisabledThumbColor;
+    final thumbStrokeColor = widget.enabled
+        ? effectiveThumbBorderColor
+        : effectiveDisabledThumbBorderColor;
+
+    final baseThumbDecoration = ShadDecoration(
+      canMerge: false,
+      color: thumbFillColor,
+      shape: BoxShape.circle,
+      border: ShadBorder.all(color: thumbStrokeColor, width: thumbBorderWidth),
+      disableSecondaryBorder: true,
+    );
+    final effectiveThumbDecoration =
+        widget.thumbDecoration ?? baseThumbDecoration;
+
+    final focusRingThumbDecoration = ShadDecoration(
+      canMerge: false,
+      color: thumbFillColor,
+      shape: BoxShape.circle,
+      border: ShadBorder.all(
+        color: theme.colorScheme.ring,
+        width: focusRingBorderWidth,
+      ),
+      disableSecondaryBorder: true,
+    );
+
     const divisionMarkWidth = 2.0;
     const divisionMarkHeight = 6.0;
     const divisionMarkOffset = 1.0;
     const divisionMarkBorderRadius = 1.0;
 
-    // Track border radius
     const activeTrackBorderRadius = 8.0;
 
-    // Calculate total additional space needed when focused
     const focusRingTotalSpace = (focusRingBorderWidth + focusRingPadding) * 2;
 
-    return ShadFocusable(
-      canRequestFocus: widget.enabled,
-      focusNode: focusNode,
-      onKeyEvent: (node, event) {
-        return _handleKeyEvent(event)
-            ? KeyEventResult.handled
-            : KeyEventResult.ignored;
-      },
-      builder: (context, focused, child) {
-        return ValueListenableBuilder(
+    return SelectionContainer.disabled(
+      child: _AbsorbSelectableRegionLongPress(
+        child: ValueListenableBuilder<List<double>>(
           valueListenable: controller,
-          builder: (context, value, child) {
+          builder: (context, values, _) {
             return LayoutBuilder(
-              builder: (context, constraints) {
+              builder: (layoutContext, constraints) {
                 assert(
                   constraints.hasBoundedWidth,
                   'ShadSlider requires a bounded width',
                 );
-                // Calculate the effective width available for the track
                 final effectiveTrackWidth = constraints.maxWidth;
-                return Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Track with gesture handling based on interaction mode
-                    ShadGestureDetector(
-                      cursor: widget.enabled
-                          ? effectiveMouseCursor
-                          : effectiveDisabledMouseCursor,
-                      onTapDown:
-                          widget.enabled &&
-                              (effectiveAllowedInteraction ==
-                                      ShadSliderInteraction.tapAndSlide ||
-                                  effectiveAllowedInteraction ==
-                                      ShadSliderInteraction.tapOnly)
-                          ? (details) {
-                              final box =
-                                  context.findRenderObject()! as RenderBox;
-                              final localPosition = box.globalToLocal(
-                                details.globalPosition,
-                              );
-                              _handleTrackTap(localPosition, constraints);
-                            }
-                          : null,
-                      onPanUpdate:
-                          widget.enabled &&
-                              (effectiveAllowedInteraction ==
-                                      ShadSliderInteraction.tapAndSlide ||
-                                  effectiveAllowedInteraction ==
-                                      ShadSliderInteraction.slideOnly)
-                          ? (details) {
-                              final box =
-                                  context.findRenderObject()! as RenderBox;
-                              final localPosition = box.globalToLocal(
-                                details.globalPosition,
-                              );
-                              _handleTrackPan(localPosition, constraints);
-                            }
-                          : null,
-                      onPanStart: widget.enabled
-                          ? (details) =>
-                                widget.onChangeStart?.call(controller.value)
-                          : null,
-                      onPanEnd: widget.enabled
-                          ? (details) =>
-                                widget.onChangeEnd?.call(controller.value)
-                          : null,
-                      child: Stack(
-                        children: [
-                          // whole track
-                          SizedBox(
-                            width: effectiveTrackWidth,
-                            height: effectiveTrackHeight,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                borderRadius: theme.radius,
-                                color: widget.enabled
-                                    ? effectiveInactiveTrackColor
-                                    : effectiveDisabledInactiveTrackColor,
-                              ),
-                            ),
-                          ),
-                          // active track
-                          SizedBox(
-                            width:
-                                effectiveTrackWidth *
-                                ((effectiveMax - effectiveMin) == 0
-                                        ? 0.0
-                                        : ((value - effectiveMin) /
-                                              (effectiveMax - effectiveMin)))
-                                    .clamp(0.0, 1.0),
-                            height: effectiveTrackHeight,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(
-                                    activeTrackBorderRadius,
-                                  ),
-                                  bottomLeft: Radius.circular(
-                                    activeTrackBorderRadius,
-                                  ),
-                                ),
-                                color: widget.enabled
-                                    ? effectiveActiveTrackColor
-                                    : effectiveDisabledActiveTrackColor,
-                              ),
-                            ),
-                          ),
-                          // division marks
-                          if (widget.divisions != null && widget.divisions! > 0)
-                            ...List.generate(widget.divisions! + 1, (index) {
-                              final position = index / widget.divisions!;
-                              return Positioned(
-                                left:
-                                    position * effectiveTrackWidth -
-                                    divisionMarkOffset,
-                                top:
-                                    (effectiveTrackHeight -
-                                        divisionMarkHeight) /
-                                    2,
-                                child: Container(
-                                  width: divisionMarkWidth,
-                                  height: divisionMarkHeight,
-                                  decoration: BoxDecoration(
-                                    color: widget.enabled
-                                        ? theme.colorScheme.border
-                                        : theme.colorScheme.border.withValues(
-                                            alpha: 0.5,
-                                          ),
-                                    borderRadius: BorderRadius.circular(
-                                      divisionMarkBorderRadius,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
-                        ],
-                      ),
-                    ),
-                    // thumb
-                    Positioned(
-                      left:
-                          (((effectiveMax - effectiveMin) == 0
-                                      ? 0.0
-                                      : ((value - effectiveMin) /
-                                                (effectiveMax - effectiveMin)) *
-                                            constraints.maxWidth) -
-                                  effectiveThumbRadius -
-                                  (focused ? focusRingTotalSpace / 2 : 0))
-                              .clamp(
-                                -(effectiveThumbRadius +
-                                    (focused ? focusRingTotalSpace / 2 : 0)),
-                                constraints.maxWidth -
-                                    effectiveThumbRadius -
-                                    (focused ? focusRingTotalSpace / 2 : 0),
-                              ),
-                      top:
-                          (effectiveTrackHeight - effectiveThumbRadius * 2) /
-                              2 -
-                          (focused ? focusRingTotalSpace / 2 : 0),
-                      child: Semantics(
-                        slider: true,
-                        value:
-                            widget.semanticFormatterCallback?.call(value) ??
-                            value.toString(),
-                        child: SizedBox(
-                          width:
-                              effectiveThumbRadius * 2 +
-                              (focused ? focusRingTotalSpace : 0),
-                          height:
-                              effectiveThumbRadius * 2 +
-                              (focused ? focusRingTotalSpace : 0),
+                final rangeSpan = effectiveMax - effectiveMin;
+                double norm(double v) {
+                  if (rangeSpan == 0) {
+                    return 0.0;
+                  }
+                  return ((v - effectiveMin) / rangeSpan).clamp(0.0, 1.0);
+                }
+
+                double activeStartNorm;
+                double activeEndNorm;
+                if (values.length == 1) {
+                  activeStartNorm = 0.0;
+                  activeEndNorm = norm(values[0]);
+                } else {
+                  var low = values[0];
+                  var high = values[0];
+                  for (final v in values.skip(1)) {
+                    if (v < low) {
+                      low = v;
+                    }
+                    if (v > high) {
+                      high = v;
+                    }
+                  }
+                  activeStartNorm = norm(low);
+                  activeEndNorm = norm(high);
+                }
+                final activeWidth =
+                    (activeEndNorm - activeStartNorm).clamp(0.0, 1.0) *
+                    effectiveTrackWidth;
+                final activeLeft = activeStartNorm * effectiveTrackWidth;
+                final activeTrackDecoration = values.length == 1
+                    ? BoxDecoration(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(activeTrackBorderRadius),
+                          bottomLeft: Radius.circular(activeTrackBorderRadius),
+                        ),
+                        color: widget.enabled
+                            ? effectiveActiveTrackColor
+                            : effectiveDisabledActiveTrackColor,
+                      )
+                    : BoxDecoration(
+                        borderRadius: BorderRadius.horizontal(
+                          left: const Radius.circular(activeTrackBorderRadius),
+                          right: const Radius.circular(activeTrackBorderRadius),
+                        ),
+                        color: widget.enabled
+                            ? effectiveActiveTrackColor
+                            : effectiveDisabledActiveTrackColor,
+                      );
+
+                final thumbHitExtent =
+                    effectiveThumbRadius * 2 + focusRingTotalSpace;
+                final sliderHitHeight = effectiveTrackHeight > thumbHitExtent
+                    ? effectiveTrackHeight
+                    : thumbHitExtent;
+                final trackVerticalInset =
+                    (sliderHitHeight - effectiveTrackHeight) / 2;
+
+                final sortedByValue = values.length > 1
+                    ? _indicesSortedByValue(values)
+                    : const <int>[];
+
+                return SizedBox(
+                  width: effectiveTrackWidth,
+                  height: sliderHitHeight,
+                  child: FocusTraversalGroup(
+                    policy: OrderedTraversalPolicy(),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Positioned(
+                          left: 0,
+                          top: trackVerticalInset,
+                          width: effectiveTrackWidth,
+                          height: effectiveTrackHeight,
                           child: ShadGestureDetector(
                             cursor: widget.enabled
                                 ? effectiveMouseCursor
                                 : effectiveDisabledMouseCursor,
+                            onTapDown:
+                                widget.enabled &&
+                                    (effectiveAllowedInteraction ==
+                                            ShadSliderInteraction.tapAndSlide ||
+                                        effectiveAllowedInteraction ==
+                                            ShadSliderInteraction.tapOnly)
+                                ? (details) {
+                                    _handleTrackTap(
+                                      details.localPosition,
+                                      constraints,
+                                      effectiveMin,
+                                      effectiveMax,
+                                    );
+                                  }
+                                : null,
+                            onPanStart:
+                                widget.enabled &&
+                                    (effectiveAllowedInteraction ==
+                                            ShadSliderInteraction.tapAndSlide ||
+                                        effectiveAllowedInteraction ==
+                                            ShadSliderInteraction.slideOnly)
+                                ? (details) {
+                                    final v = _valueFromDx(
+                                      details.localPosition.dx,
+                                      constraints,
+                                      effectiveMin,
+                                      effectiveMax,
+                                    );
+                                    final thumbIndex = _nearestThumbIndex(
+                                      v,
+                                      controller.value,
+                                    );
+                                    _trackDragThumbIndex = thumbIndex;
+                                    _requestFocusForThumb(thumbIndex);
+                                    widget.onChangeStart?.call(
+                                      controller.value,
+                                    );
+                                  }
+                                : null,
+                            onPanUpdate:
+                                widget.enabled &&
+                                    (effectiveAllowedInteraction ==
+                                            ShadSliderInteraction.tapAndSlide ||
+                                        effectiveAllowedInteraction ==
+                                            ShadSliderInteraction.slideOnly)
+                                ? (details) {
+                                    _handleTrackPan(
+                                      details.localPosition,
+                                      constraints,
+                                      effectiveMin,
+                                      effectiveMax,
+                                    );
+                                  }
+                                : null,
+                            onPanEnd: widget.enabled
+                                ? (details) {
+                                    _trackDragThumbIndex = null;
+                                    widget.onChangeEnd?.call(controller.value);
+                                  }
+                                : null,
+                            child: Stack(
+                              children: [
+                                SizedBox(
+                                  width: effectiveTrackWidth,
+                                  height: effectiveTrackHeight,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      borderRadius: theme.radius,
+                                      color: widget.enabled
+                                          ? effectiveInactiveTrackColor
+                                          : effectiveDisabledInactiveTrackColor,
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  left: activeLeft,
+                                  child: SizedBox(
+                                    width: activeWidth,
+                                    height: effectiveTrackHeight,
+                                    child: DecoratedBox(
+                                      decoration: activeTrackDecoration,
+                                    ),
+                                  ),
+                                ),
+                                if (widget.divisions != null &&
+                                    widget.divisions! > 0 &&
+                                    widget.showDivisionMarks)
+                                  ...List.generate(widget.divisions! + 1, (
+                                    index,
+                                  ) {
+                                    final position = index / widget.divisions!;
+                                    return Positioned(
+                                      left:
+                                          position * effectiveTrackWidth -
+                                          divisionMarkOffset,
+                                      top:
+                                          (effectiveTrackHeight -
+                                              divisionMarkHeight) /
+                                          2,
+                                      child: Container(
+                                        width: divisionMarkWidth,
+                                        height: divisionMarkHeight,
+                                        decoration: BoxDecoration(
+                                          color: widget.enabled
+                                              ? theme.colorScheme.border
+                                              : theme.colorScheme.border
+                                                    .withValues(alpha: 0.5),
+                                          borderRadius: BorderRadius.circular(
+                                            divisionMarkBorderRadius,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (values.length == 1)
+                          _ShadSliderThumb(
+                            key: const ValueKey<String>('shad-slider-thumb-0'),
+                            focusNode: focusNode,
+                            autofocus: widget.autofocus,
+                            onKeyEvent: widget.enabled
+                                ? (node, event) {
+                                    return _handleKeyEvent(0, event)
+                                        ? KeyEventResult.handled
+                                        : KeyEventResult.ignored;
+                                  }
+                                : null,
+                            value: values[0],
+                            constraints: constraints,
+                            effectiveMin: effectiveMin,
+                            effectiveMax: effectiveMax,
+                            effectiveTrackHeight: effectiveTrackHeight,
+                            trackVerticalInset: trackVerticalInset,
+                            effectiveThumbRadius: effectiveThumbRadius,
+                            enabled: widget.enabled,
+                            effectiveMouseCursor: effectiveMouseCursor,
+                            effectiveDisabledMouseCursor:
+                                effectiveDisabledMouseCursor,
+                            thumbDecoration: effectiveThumbDecoration,
+                            focusRingThumbDecoration: focusRingThumbDecoration,
+                            focusRingPadding: focusRingPadding,
+                            focusRingTotalSpace: focusRingTotalSpace,
+                            allowedInteraction: effectiveAllowedInteraction,
+                            semanticValue: _semanticValueForThumb(
+                              values,
+                              0,
+                              values[0],
+                            ),
+                            onPanStart: widget.enabled
+                                ? () {
+                                    widget.onChangeStart?.call(
+                                      controller.value,
+                                    );
+                                  }
+                                : null,
+                            onPanEnd: widget.enabled
+                                ? () {
+                                    widget.onChangeEnd?.call(controller.value);
+                                  }
+                                : null,
                             onPanUpdate:
                                 widget.enabled &&
                                     (effectiveAllowedInteraction ==
@@ -649,81 +938,338 @@ class _ShadSliderState extends State<ShadSlider> {
                                             ShadSliderInteraction.slideOnly ||
                                         effectiveAllowedInteraction ==
                                             ShadSliderInteraction.slideThumb)
-                                ? (details) {
+                                ? (Offset globalPosition) {
                                     final box =
-                                        context.findRenderObject()!
-                                            as RenderBox;
+                                        layoutContext.findRenderObject()
+                                            as RenderBox?;
+                                    if (box == null) {
+                                      return;
+                                    }
                                     final localPosition = box.globalToLocal(
-                                      details.globalPosition,
+                                      globalPosition,
                                     );
-                                    _handleTrackPan(localPosition, constraints);
+                                    final newValue = _valueFromDx(
+                                      localPosition.dx,
+                                      constraints,
+                                      effectiveMin,
+                                      effectiveMax,
+                                    );
+                                    _updateThumbAt(
+                                      0,
+                                      newValue,
+                                      effectiveMin,
+                                      effectiveMax,
+                                    );
                                   }
                                 : null,
-                            onPanStart: widget.enabled
-                                ? (details) => widget.onChangeStart?.call(
-                                    controller.value,
-                                  )
-                                : null,
-                            onPanEnd: widget.enabled
-                                ? (details) =>
-                                      widget.onChangeEnd?.call(controller.value)
-                                : null,
-                            child: focused
-                                ? Container(
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: widget.enabled
-                                          ? effectiveThumbColor
-                                          : effectiveDisabledThumbColor,
-                                      border: Border.all(
-                                        color: theme.colorScheme.ring,
-                                        width: focusRingBorderWidth,
-                                      ),
-                                    ),
-                                    child: Container(
-                                      margin: const EdgeInsets.all(
-                                        focusRingPadding,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: widget.enabled
-                                            ? effectiveThumbColor
-                                            : effectiveDisabledThumbColor,
-                                        border: Border.all(
-                                          color: widget.enabled
-                                              ? effectiveThumbBorderColor
-                                              // ignore: lines_longer_than_80_chars
-                                              : effectiveDisabledThumbBorderColor,
-                                          width: thumbBorderWidth,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : Container(
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: widget.enabled
-                                          ? effectiveThumbColor
-                                          : effectiveDisabledThumbColor,
-                                      border: Border.all(
-                                        color: widget.enabled
-                                            ? effectiveThumbBorderColor
-                                            : effectiveDisabledThumbBorderColor,
-                                        width: thumbBorderWidth,
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ),
+                          )
+                        else
+                          for (var i = 0; i < values.length; i++)
+                            _ShadSliderThumb(
+                              key: ValueKey<int>(i),
+                              focusTraversalOrder: NumericFocusOrder(
+                                sortedByValue.indexOf(i).toDouble(),
+                              ),
+                              focusNode: _thumbFocusNodes[i],
+                              autofocus:
+                                  widget.autofocus && sortedByValue.first == i,
+                              onKeyEvent: widget.enabled
+                                  ? (node, event) {
+                                      return _handleKeyEvent(i, event)
+                                          ? KeyEventResult.handled
+                                          : KeyEventResult.ignored;
+                                    }
+                                  : null,
+                              value: values[i],
+                              constraints: constraints,
+                              effectiveMin: effectiveMin,
+                              effectiveMax: effectiveMax,
+                              effectiveTrackHeight: effectiveTrackHeight,
+                              trackVerticalInset: trackVerticalInset,
+                              effectiveThumbRadius: effectiveThumbRadius,
+                              enabled: widget.enabled,
+                              effectiveMouseCursor: effectiveMouseCursor,
+                              effectiveDisabledMouseCursor:
+                                  effectiveDisabledMouseCursor,
+                              thumbDecoration: effectiveThumbDecoration,
+                              focusRingThumbDecoration:
+                                  focusRingThumbDecoration,
+                              focusRingPadding: focusRingPadding,
+                              focusRingTotalSpace: focusRingTotalSpace,
+                              allowedInteraction: effectiveAllowedInteraction,
+                              semanticValue: _semanticValueForThumb(
+                                values,
+                                i,
+                                values[i],
+                              ),
+                              onPanStart: widget.enabled
+                                  ? () {
+                                      widget.onChangeStart?.call(
+                                        controller.value,
+                                      );
+                                    }
+                                  : null,
+                              onPanEnd: widget.enabled
+                                  ? () {
+                                      widget.onChangeEnd?.call(
+                                        controller.value,
+                                      );
+                                    }
+                                  : null,
+                              onPanUpdate:
+                                  widget.enabled &&
+                                      (effectiveAllowedInteraction ==
+                                              ShadSliderInteraction
+                                                  .tapAndSlide ||
+                                          effectiveAllowedInteraction ==
+                                              ShadSliderInteraction.slideOnly ||
+                                          effectiveAllowedInteraction ==
+                                              ShadSliderInteraction.slideThumb)
+                                  ? (Offset globalPosition) {
+                                      final box =
+                                          layoutContext.findRenderObject()
+                                              as RenderBox?;
+                                      if (box == null) {
+                                        return;
+                                      }
+                                      final localPosition = box.globalToLocal(
+                                        globalPosition,
+                                      );
+                                      final newValue = _valueFromDx(
+                                        localPosition.dx,
+                                        constraints,
+                                        effectiveMin,
+                                        effectiveMax,
+                                      );
+                                      _updateThumbAt(
+                                        i,
+                                        newValue,
+                                        effectiveMin,
+                                        effectiveMax,
+                                      );
+                                    }
+                                  : null,
+                            ),
+                      ],
                     ),
-                  ],
+                  ),
                 );
               },
             );
           },
-        );
-      },
+        ),
+      ),
+    );
+  }
+}
+
+class _ShadSliderThumb extends StatelessWidget {
+  const _ShadSliderThumb({
+    super.key,
+    this.focusTraversalOrder,
+    required this.focusNode,
+    required this.autofocus,
+    required this.onKeyEvent,
+    required this.value,
+    required this.constraints,
+    required this.effectiveMin,
+    required this.effectiveMax,
+    required this.effectiveTrackHeight,
+    required this.trackVerticalInset,
+    required this.effectiveThumbRadius,
+    required this.enabled,
+    required this.effectiveMouseCursor,
+    required this.effectiveDisabledMouseCursor,
+    required this.thumbDecoration,
+    required this.focusRingThumbDecoration,
+    required this.focusRingPadding,
+    required this.focusRingTotalSpace,
+    required this.allowedInteraction,
+    required this.semanticValue,
+    required this.onPanStart,
+    required this.onPanEnd,
+    required this.onPanUpdate,
+  });
+
+  final NumericFocusOrder? focusTraversalOrder;
+  final FocusNode focusNode;
+  final bool autofocus;
+  final FocusOnKeyEventCallback? onKeyEvent;
+  final double value;
+  final BoxConstraints constraints;
+  final double effectiveMin;
+  final double effectiveMax;
+  final double effectiveTrackHeight;
+  final double trackVerticalInset;
+  final double effectiveThumbRadius;
+  final bool enabled;
+  final MouseCursor effectiveMouseCursor;
+  final MouseCursor effectiveDisabledMouseCursor;
+  final ShadDecoration thumbDecoration;
+  final ShadDecoration focusRingThumbDecoration;
+  final double focusRingPadding;
+  final double focusRingTotalSpace;
+  final ShadSliderInteraction allowedInteraction;
+  final String semanticValue;
+  final VoidCallback? onPanStart;
+  final VoidCallback? onPanEnd;
+  final void Function(Offset globalPosition)? onPanUpdate;
+
+  @override
+  Widget build(BuildContext context) {
+    final rangeSpan = effectiveMax - effectiveMin;
+    final fraction = rangeSpan == 0
+        ? 0.0
+        : ((value - effectiveMin) / rangeSpan).clamp(0.0, 1.0);
+    final centerX = fraction * constraints.maxWidth;
+
+    final hitWidth = effectiveThumbRadius * 2 + focusRingTotalSpace;
+    final hitHeight = effectiveThumbRadius * 2 + focusRingTotalSpace;
+    final halfHitW = hitWidth / 2;
+
+    final focusCore = _ShadSliderThumbFocusCore(
+      focusNode: focusNode,
+      autofocus: autofocus,
+      onKeyEvent: onKeyEvent,
+      enabled: enabled,
+      effectiveMouseCursor: effectiveMouseCursor,
+      effectiveDisabledMouseCursor: effectiveDisabledMouseCursor,
+      allowedInteraction: allowedInteraction,
+      semanticValue: semanticValue,
+      onPanStart: onPanStart,
+      onPanEnd: onPanEnd,
+      onPanUpdate: onPanUpdate,
+      hitWidth: hitWidth,
+      hitHeight: hitHeight,
+      effectiveThumbRadius: effectiveThumbRadius,
+      focusRingPadding: focusRingPadding,
+      thumbDecoration: thumbDecoration,
+      focusRingThumbDecoration: focusRingThumbDecoration,
+    );
+    final traversalOrder = focusTraversalOrder;
+    final positionedChild = traversalOrder != null
+        ? FocusTraversalOrder(order: traversalOrder, child: focusCore)
+        : focusCore;
+
+    return Positioned(
+      left: (centerX - halfHitW).clamp(
+        -halfHitW + effectiveThumbRadius,
+        constraints.maxWidth - halfHitW - effectiveThumbRadius,
+      ),
+      top: trackVerticalInset + (effectiveTrackHeight - hitHeight) / 2,
+      child: positionedChild,
+    );
+  }
+}
+
+class _ShadSliderThumbFocusCore extends StatelessWidget {
+  const _ShadSliderThumbFocusCore({
+    required this.focusNode,
+    required this.autofocus,
+    required this.onKeyEvent,
+    required this.enabled,
+    required this.effectiveMouseCursor,
+    required this.effectiveDisabledMouseCursor,
+    required this.allowedInteraction,
+    required this.semanticValue,
+    required this.onPanStart,
+    required this.onPanEnd,
+    required this.onPanUpdate,
+    required this.hitWidth,
+    required this.hitHeight,
+    required this.effectiveThumbRadius,
+    required this.focusRingPadding,
+    required this.thumbDecoration,
+    required this.focusRingThumbDecoration,
+  });
+
+  final FocusNode focusNode;
+  final bool autofocus;
+  final FocusOnKeyEventCallback? onKeyEvent;
+  final bool enabled;
+  final MouseCursor effectiveMouseCursor;
+  final MouseCursor effectiveDisabledMouseCursor;
+  final ShadSliderInteraction allowedInteraction;
+  final String semanticValue;
+  final VoidCallback? onPanStart;
+  final VoidCallback? onPanEnd;
+  final void Function(Offset globalPosition)? onPanUpdate;
+  final double hitWidth;
+  final double hitHeight;
+  final double effectiveThumbRadius;
+  final double focusRingPadding;
+  final ShadDecoration thumbDecoration;
+  final ShadDecoration focusRingThumbDecoration;
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      focusNode: focusNode,
+      autofocus: autofocus,
+      canRequestFocus: enabled,
+      onKeyEvent: onKeyEvent,
+      child: Builder(
+        builder: (focusContext) {
+          final showFocusRing = Focus.of(focusContext).hasFocus;
+          final thumbChild = showFocusRing
+              ? ShadDecorator(
+                  decoration: focusRingThumbDecoration,
+                  child: Padding(
+                    padding: EdgeInsets.all(focusRingPadding),
+                    child: SizedBox(
+                      width: effectiveThumbRadius * 2,
+                      height: effectiveThumbRadius * 2,
+                      child: ShadDecorator(
+                        decoration: thumbDecoration,
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                  ),
+                )
+              : ShadDecorator(
+                  decoration: thumbDecoration,
+                  child: SizedBox(
+                    width: effectiveThumbRadius * 2,
+                    height: effectiveThumbRadius * 2,
+                  ),
+                );
+
+          final panHandler = onPanUpdate;
+          return Semantics(
+            slider: true,
+            value: semanticValue,
+            child: ShadGestureDetector(
+              cursor: enabled
+                  ? effectiveMouseCursor
+                  : effectiveDisabledMouseCursor,
+              onTapDown: enabled ? (_) => focusNode.requestFocus() : null,
+              onPanStart:
+                  enabled &&
+                      panHandler != null &&
+                      (allowedInteraction ==
+                              ShadSliderInteraction.tapAndSlide ||
+                          allowedInteraction ==
+                              ShadSliderInteraction.slideOnly ||
+                          allowedInteraction ==
+                              ShadSliderInteraction.slideThumb)
+                  ? (_) {
+                      focusNode.requestFocus();
+                      onPanStart?.call();
+                    }
+                  : null,
+              onPanUpdate: enabled && panHandler != null
+                  ? (details) => panHandler(details.globalPosition)
+                  : null,
+              onPanEnd: enabled ? (_) => onPanEnd?.call() : null,
+              child: SizedBox(
+                width: hitWidth,
+                height: hitHeight,
+                child: Center(child: thumbChild),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
