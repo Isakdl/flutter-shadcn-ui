@@ -11,8 +11,8 @@ topics:
   - material-alternative
 
 environment:
-  sdk: ">=3.11.0 <4.0.0"
-  flutter: ">=3.41.0"
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.0"
 
 dependencies:
   boxy: ">=2.1.2 <3.0.0"
