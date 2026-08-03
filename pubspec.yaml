@@ -44,12 +44,6 @@ dev_dependencies:
 
 flutter:
   fonts:
-    - family: Geist
-      fonts:
-        - asset: fonts/Geist[wght].ttf
-    - family: GeistMono
-      fonts:
-        - asset: fonts/GeistMono[wght].ttf
     - family: Lucide
       fonts:
         - asset: fonts/Lucide.ttf
