@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:shadcn_ui/src/assets/lucide_icons.dart';
 
 import 'package:shadcn_ui/src/components/icon_button.dart';
 import 'package:shadcn_ui/src/components/sidebar/sidebar_scaffold.dart';
