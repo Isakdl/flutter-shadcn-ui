@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 /// Subset of Lucide icons used by shadcn_ui and Serverpod Cloud apps.
-/// Regenerate with the vendor_lucide script when adding icons.
+/// Regenerate with scripts/vendor_lucide.py when adding icons.
 abstract final class LucideIcons {
   static const IconData activity = IconData(
     0xe038,
@@ -275,6 +275,11 @@ abstract final class LucideIcons {
   );
   static const IconData moon = IconData(
     0xe122,
+    fontFamily: 'Lucide',
+    fontPackage: 'shadcn_ui',
+  );
+  static const IconData network = IconData(
+    0xe129,
     fontFamily: 'Lucide',
     fontPackage: 'shadcn_ui',
   );

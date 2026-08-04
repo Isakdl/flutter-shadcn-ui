@@ -53,6 +53,7 @@ messageSquare
 minus
 monitor
 moon
+network
 octagonAlert
 package
 panelLeft
