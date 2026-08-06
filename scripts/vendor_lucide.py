@@ -15,7 +15,9 @@ if missing:
 cps = {n: int(decls[n]) for n in names}
 from fontTools import subset
 opts = subset.Options()
-f = subset.load_font(os.path.join(pkg, 'assets/lucide.ttf'), opts)
+# 300-weight instance: same codepoints as the default font, thinner strokes.
+f = subset.load_font(
+    os.path.join(pkg, 'assets/build_font/LucideVariable-w300.ttf'), opts)
 s = subset.Subsetter(opts)
 s.populate(unicodes=list(cps.values()))
 s.subset(f)
