@@ -173,6 +173,11 @@ abstract final class LucideIcons {
     fontFamily: 'Lucide',
     fontPackage: 'shadcn_ui',
   );
+  static const IconData file = IconData(
+    0xe0c4,
+    fontFamily: 'Lucide',
+    fontPackage: 'shadcn_ui',
+  );
   static const IconData fileCheck2 = IconData(
     0xe0c6,
     fontFamily: 'Lucide',
